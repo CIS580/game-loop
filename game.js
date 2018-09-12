@@ -27,6 +27,7 @@ var priorInput = {
 }
 var x = 0;
 var y = 0;
+var bullets = [];
 
 /** @function handleKeydown
   * Event handler for keydown events
@@ -35,6 +36,7 @@ var y = 0;
 function handleKeydown(event) {
   switch(event.key) {
     case ' ':
+    console.log('fire?', currentInput, priorInput)
       currentInput.space = true;
       break;
     case 'ArrowUp':
@@ -57,6 +59,7 @@ window.addEventListener('keydown', handleKeydown);
 function handleKeyup(event) {
   switch(event.key) {
     case ' ':
+    console.log('no fire?', currentInput, priorInput)
       currentInput.space = false;
       break;
     case 'ArrowUp':
@@ -81,16 +84,16 @@ function loop(timestamp) {
   if(!start) start = timestamp;
   var elapsedTime = timestamp - start;
   start = timestamp;
-  pollInput();
   update(elapsedTime);
   render(elapsedTime);
+  copyInput();
   window.requestAnimationFrame(loop);
 }
 
-/** @function pollInput
+/** @function copyInput
   * Copies the current input into the previous input
   */
-function pollInput() {
+function copyInput() {
   priorInput = JSON.parse(JSON.stringify(currentInput));
 }
 
@@ -103,6 +106,7 @@ function update(elapsedTime) {
   // move the red square when the space bar is down
   if(currentInput.space && !priorInput.space) {
     // TODO: Fire bullet
+    bullets.push(new Bullet(x+11, y, 2));
   }
   if(currentInput.up) {
     y -= 0.1 * elapsedTime;
@@ -110,6 +114,11 @@ function update(elapsedTime) {
   if(currentInput.down) {
     y += 0.1 * elapsedTime;
   }
+  bullets.forEach(function(bullet, index){
+    bullet.update(elapsedTime);
+    // check to see if bullet is off-screen
+    if(bullet.x >= WIDTH + bullet.r) bullets.splice(index, 1);
+  });
 }
 
 /** @function render
@@ -120,8 +129,30 @@ function update(elapsedTime) {
 function render(elapsedTime) {
   screenCtx.clearRect(0, 0, WIDTH, HEIGHT);
   screenCtx.fillStyle = "#ff0000";
-  screenCtx.fillRect(10+x,10+y,20,20);
+  screenCtx.fillRect(x,y-10,20,20);
+  bullets.forEach(function(bullet){
+    bullet.render(screenCtx);
+  });
 }
 
 // Start the game loop
 window.requestAnimationFrame(loop);
+
+
+// Bullet class
+function Bullet(x, y, r) {
+  this.x = x;
+  this.y = y;
+  this.r = r;
+}
+
+Bullet.prototype.update = function(deltaT) {
+  this.x += deltaT * 0.5;
+}
+
+Bullet.prototype.render = function(context) {
+  context.beginPath();
+  context.fillStyle = 'pink';
+  context.arc(this.x - this.r, this.y - this.r, 2*this.r, 2*this.r, 0, 2 * Math.pi);
+  context.fill();
+}
